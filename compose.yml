@@ -1,0 +1,20 @@
+services:
+  bastion:
+    build: .
+    image: bastion-auth:local
+    container_name: bastion-auth
+    restart: unless-stopped
+    # Owner of the data directory on the host (keys, database).
+    user: "${BASTION_UID:-1000}:${BASTION_GID:-1000}"
+    env_file: .env
+    ports:
+      - "${BASTION_BIND:-127.0.0.1}:${BASTION_PORT:-8800}:8800"
+    volumes:
+      - "${BASTION_DATA:-./data}:/data"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
