@@ -8,7 +8,6 @@ element whose content is clipped or scrolls inside it.
 """
 
 import sys
-import time
 
 import pyotp
 from playwright.sync_api import Page, sync_playwright
