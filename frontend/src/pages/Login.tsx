@@ -6,11 +6,13 @@ import { CodeInput } from "../components/CodeInput";
 import { Gate } from "../components/Gate";
 import type { MarkState } from "../components/Mark";
 import { CopyButton, Field, Notice } from "../components/ui";
+import { useI18n } from "../i18n";
 
 type Step = "credentials" | "totp" | "recovery" | "enroll" | "codes";
 type Enrollment = { secret: string; otpauth_uri: string; qr_svg: string };
 
 export function LoginPage() {
+  const { t } = useI18n();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { me, loading, setupRequired, refresh } = useAuth();
@@ -30,8 +32,8 @@ export function LoginPage() {
   const [next, setNext] = useState("/");
 
   useEffect(() => {
-    const t = window.setTimeout(() => setMark((m) => (m === "drawing" ? "idle" : m)), 1700);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setMark((m) => (m === "drawing" ? "idle" : m)), 1700);
+    return () => window.clearTimeout(timer);
   }, []);
 
   if (!loading && setupRequired) return <Navigate to="/setup" replace />;
@@ -55,7 +57,7 @@ export function LoginPage() {
         setStep("credentials");
         setPassword("");
       }
-      setError(errorText(err));
+      setError(errorText(err, t));
       setResetKey((k) => k + 1);
     } finally {
       setBusy(false);
@@ -115,32 +117,33 @@ export function LoginPage() {
     });
 
   const downloadCodes = () => {
-    const text = `Резервные коды Bastion для ${username}\nКаждый код работает один раз.\n\n${codes.join("\n")}\n`;
+    const text = `${t("codes.fileHeader", { user: username })}\n\n${codes.join("\n")}\n`;
     const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: "bastion-recovery-codes.txt" });
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const switchTo = (s: Step) => {
+    setError("");
+    setStep(s);
+  };
+
   return (
     <Gate mark={mark}>
       {params.get("signed_out") && step === "credentials" && !error && (
-        <div style={{ marginBottom: 20 }}>
-          <Notice kind="ok">Вы вышли из Bastion.</Notice>
+        <div style={{ marginBottom: 16 }}>
+          <Notice kind="ok">{t("login.signedOut")}</Notice>
         </div>
       )}
 
       {step === "credentials" && (
         <>
-          <h1 className="wall-title">Вход</h1>
-          <p className="wall-lead">
-            {returnTo?.startsWith("/oidc/")
-              ? "Сервис просит подтвердить, кто вы. После входа вернём вас обратно."
-              : "Логин и пароль, затем код из приложения на телефоне."}
-          </p>
+          <h1 className="wall-title">{t("login.title")}</h1>
+          <p className="wall-lead">{returnTo?.startsWith("/oidc/") ? t("login.leadOidc") : t("login.lead")}</p>
           <form className="wall-form" onSubmit={submitCredentials}>
             <Field
-              label="Логин"
+              label={t("login.username")}
               name="username"
               autoComplete="username"
               autoCapitalize="none"
@@ -151,7 +154,7 @@ export function LoginPage() {
               autoFocus
             />
             <Field
-              label="Пароль"
+              label={t("login.password")}
               name="password"
               type="password"
               autoComplete="current-password"
@@ -161,7 +164,7 @@ export function LoginPage() {
             />
             <Notice>{error}</Notice>
             <button className="btn btn-wide" type="submit" disabled={busy}>
-              {busy ? "Проверяем…" : "Продолжить"}
+              {busy ? t("login.checking") : t("login.continue")}
             </button>
           </form>
         </>
@@ -169,14 +172,14 @@ export function LoginPage() {
 
       {step === "totp" && (
         <>
-          <h1 className="wall-title">{name ? `${name}, ещё код` : "Код из приложения"}</h1>
-          <p className="wall-lead">Откройте Google Authenticator и введите шесть цифр для Bastion.</p>
+          <h1 className="wall-title">{name ? t("totp.titleNamed", { name }) : t("totp.title")}</h1>
+          <p className="wall-lead">{t("totp.lead")}</p>
           <div className="wall-form">
             <CodeInput onComplete={submitCode} disabled={busy} error={!!error} resetKey={resetKey} />
             <Notice>{error}</Notice>
             <p>
-              <button className="link-button" type="button" onClick={() => { setError(""); setStep("recovery"); }}>
-                Нет телефона под рукой
+              <button className="link-button" type="button" onClick={() => switchTo("recovery")}>
+                {t("totp.noPhone")}
               </button>
             </p>
           </div>
@@ -185,11 +188,11 @@ export function LoginPage() {
 
       {step === "recovery" && (
         <>
-          <h1 className="wall-title">Резервный код</h1>
-          <p className="wall-lead">Один из десяти кодов, которые вы сохранили при подключении. Каждый работает один раз.</p>
+          <h1 className="wall-title">{t("recovery.title")}</h1>
+          <p className="wall-lead">{t("recovery.lead")}</p>
           <form className="wall-form" onSubmit={submitRecovery}>
             <Field
-              label="Резервный код"
+              label={t("recovery.field")}
               placeholder="xxxxx-xxxxx"
               autoComplete="off"
               autoCapitalize="none"
@@ -201,11 +204,11 @@ export function LoginPage() {
             />
             <Notice>{error}</Notice>
             <button className="btn btn-wide" type="submit" disabled={busy}>
-              Войти по резервному коду
+              {t("recovery.submit")}
             </button>
             <p>
-              <button className="link-button" type="button" onClick={() => { setError(""); setStep("totp"); }}>
-                Ввести код из приложения
+              <button className="link-button" type="button" onClick={() => switchTo("totp")}>
+                {t("recovery.useApp")}
               </button>
             </p>
           </form>
@@ -214,23 +217,19 @@ export function LoginPage() {
 
       {step === "enroll" && enrollment && (
         <>
-          <h1 className="wall-title">Привяжите телефон</h1>
-          <p className="wall-lead">
-            Отсканируйте QR-код в Google Authenticator. Дальше при каждом входе понадобится код из приложения.
-          </p>
+          <h1 className="wall-title">{t("enroll.title")}</h1>
+          <p className="wall-lead">{t("enroll.lead")}</p>
           <div className="wall-form">
-            <div className="qr" dangerouslySetInnerHTML={{ __html: enrollment.qr_svg }} />
-            <details>
-              <summary className="link-button" style={{ listStyle: "none", display: "inline" }}>
-                Не сканируется? Ввести ключ вручную
-              </summary>
-              <div style={{ display: "grid", gap: 8, marginTop: 10, justifyItems: "start" }}>
+            <div className="enroll">
+              <div className="qr" dangerouslySetInnerHTML={{ __html: enrollment.qr_svg }} />
+              <div className="enroll-key">
+                <span>{t("enroll.manual")}</span>
                 <span className="secret">{enrollment.secret.match(/.{1,4}/g)?.join(" ")}</span>
-                <CopyButton value={enrollment.secret} label="Скопировать ключ" />
+                <CopyButton value={enrollment.secret} label={t("enroll.copyKey")} />
               </div>
-            </details>
+            </div>
             <div className="field">
-              <span className="field-label">Код из приложения</span>
+              <span className="field-label">{t("enroll.code")}</span>
               <CodeInput onComplete={submitEnroll} disabled={busy} error={!!error} resetKey={resetKey} />
             </div>
             <Notice>{error}</Notice>
@@ -240,10 +239,8 @@ export function LoginPage() {
 
       {step === "codes" && (
         <>
-          <h1 className="wall-title">Резервные коды</h1>
-          <p className="wall-lead">
-            Если телефон потеряется, войти можно будет одним из этих кодов. Сохраните их туда, где не потеряете.
-          </p>
+          <h1 className="wall-title">{t("codes.title")}</h1>
+          <p className="wall-lead">{t("codes.lead")}</p>
           <div className="wall-form">
             <ul className="recovery-list">
               {codes.map((c) => (
@@ -251,13 +248,13 @@ export function LoginPage() {
               ))}
             </ul>
             <div className="row-actions">
-              <CopyButton value={codes.join("\n")} label="Скопировать" />
+              <CopyButton value={codes.join("\n")} label={t("codes.copy")} />
               <button type="button" className="btn btn-quiet btn-small" onClick={downloadCodes}>
-                Скачать .txt
+                {t("codes.download")}
               </button>
             </div>
             <button className="btn btn-wide" type="button" onClick={() => void go(next)}>
-              Коды сохранены, продолжить
+              {t("codes.done")}
             </button>
           </div>
         </>

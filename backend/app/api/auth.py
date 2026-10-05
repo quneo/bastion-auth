@@ -75,7 +75,7 @@ def setup(body: SetupIn, request: Request, db: DbSession = Depends(get_db)) -> d
         raise _err("bad_setup_token", status.HTTP_403_FORBIDDEN)
     admins = db.scalar(select(Group).where(Group.name == ADMINS_GROUP))
     if admins is None:
-        admins = Group(name=ADMINS_GROUP, description="Полный доступ к Bastion")
+        admins = Group(name=ADMINS_GROUP, description="Full access to Bastion")
         db.add(admins)
     user = User(
         username=body.username,

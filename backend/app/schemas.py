@@ -14,7 +14,7 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def _slug(value: str) -> str:
     value = value.strip().lower()
     if not _NAME_RE.fullmatch(value):
-        raise ValueError("2–32 символа: латиница, цифры, точка, дефис, подчёркивание")
+        raise ValueError("2-32 characters: a-z, 0-9, dot, dash, underscore")
     return value
 
 
@@ -25,15 +25,15 @@ def _email(value: str | None) -> str | None:
     if not value:
         return None
     if not _EMAIL_RE.fullmatch(value):
-        raise ValueError("Некорректный email")
+        raise ValueError("Invalid email")
     return value
 
 
 def _password(value: str) -> str:
     if len(value) < MIN_PASSWORD_LENGTH:
-        raise ValueError(f"Минимум {MIN_PASSWORD_LENGTH} символов")
+        raise ValueError(f"At least {MIN_PASSWORD_LENGTH} characters")
     if len(value) > 256:
-        raise ValueError("Слишком длинный пароль")
+        raise ValueError("Password is too long")
     return value
 
 
@@ -45,7 +45,7 @@ def _redirect_uri(value: str) -> str:
     # http(s) for web apps, custom schemes (app.immich:///...) for mobile apps.
     match = re.match(r"^([a-z][a-z0-9+.-]*):(//)?[^\s#]+$", value, re.IGNORECASE)
     if not match or match.group(1).lower() in _BLOCKED_SCHEMES or len(value) > 512:
-        raise ValueError("Нужен полный адрес вида https://… или app.scheme:///…, без #")
+        raise ValueError("Use a full address like https://... or app.scheme:///..., without #")
     return value
 
 
@@ -54,7 +54,7 @@ def _optional_url(value: str | None) -> str | None:
         return None
     value = value.strip()
     if not re.match(r"^https?://\S+$", value) or len(value) > 512:
-        raise ValueError("Адрес должен начинаться с http:// или https://")
+        raise ValueError("Address must start with http:// or https://")
     return value
 
 

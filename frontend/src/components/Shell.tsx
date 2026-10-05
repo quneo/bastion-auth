@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { LangSwitch, useI18n } from "../i18n";
 import { Mark } from "./Mark";
 
 export function Shell() {
+  const { t } = useI18n();
   const { me, refresh } = useAuth();
   const navigate = useNavigate();
   if (!me) return null;
@@ -19,31 +21,31 @@ export function Shell() {
   return (
     <div className="shell">
       <aside className="rail">
-        <NavLink to="/" className="rail-brand" aria-label="Bastion, на главную">
+        <NavLink to="/" className="rail-brand" aria-label={t("nav.home")}>
           <Mark />
           <span>Bastion</span>
         </NavLink>
-        <nav aria-label="Основная навигация">
+        <nav aria-label={t("nav.main")}>
           <NavLink to="/" end className={link}>
-            Сервисы
+            {t("nav.services")}
           </NavLink>
           <NavLink to="/account" className={link}>
-            Профиль и вход
+            {t("nav.account")}
           </NavLink>
           {me.is_admin && (
             <>
-              <p className="rail-heading">Администрирование</p>
+              <p className="rail-heading">{t("nav.admin")}</p>
               <NavLink to="/admin/users" className={link}>
-                Люди
+                {t("nav.people")}
               </NavLink>
               <NavLink to="/admin/groups" className={link}>
-                Группы
+                {t("nav.groups")}
               </NavLink>
               <NavLink to="/admin/projects" className={link}>
-                Проекты
+                {t("nav.projects")}
               </NavLink>
               <NavLink to="/admin/audit" className={link}>
-                Журнал входов
+                {t("nav.audit")}
               </NavLink>
             </>
           )}
@@ -53,9 +55,12 @@ export function Shell() {
             {me.display_name}
             <small>{me.username}</small>
           </div>
-          <button className="btn btn-quiet btn-small" type="button" onClick={signOut}>
-            Выйти
-          </button>
+          <div className="row-actions">
+            <button className="btn btn-quiet btn-small" type="button" onClick={signOut}>
+              {t("nav.signOut")}
+            </button>
+            <LangSwitch />
+          </div>
         </div>
       </aside>
       <main className="sheet">

@@ -42,7 +42,7 @@ def future_code(secret: str, steps_ahead: int = 1) -> str:
 
 def create_admin(client: TestClient) -> None:
     r = client.post("/api/auth/setup", headers=H, json={
-        "token": setup_token(), "username": "vadim", "display_name": "Вадим", "password": ADMIN_PASSWORD,
+        "token": setup_token(), "username": "user1", "display_name": "User 1", "password": ADMIN_PASSWORD,
     })
     assert r.status_code == 200, r.text
 
@@ -60,5 +60,5 @@ def login_and_enroll(client: TestClient, username: str, password: str) -> tuple[
 @pytest.fixture()
 def admin(client):
     create_admin(client)
-    secret, codes = login_and_enroll(client, "vadim", ADMIN_PASSWORD)
+    secret, codes = login_and_enroll(client, "user1", ADMIN_PASSWORD)
     return {"secret": secret, "codes": codes}

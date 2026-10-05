@@ -1,3 +1,5 @@
+import type { Key, T } from "./i18n";
+
 export type GroupRef = { id: number; name: string };
 
 export type User = {
@@ -89,7 +91,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       // FastAPI validation errors
       const first = detail[0];
       throw new ApiError(res.status, "validation", {
-        field: first?.loc?.[first.loc.length - 1],
+        field: [...(first?.loc ?? [])].reverse().find((part) => typeof part === "string"),
         message: String(first?.msg ?? "").replace(/^Value error, /, ""),
       });
     }
@@ -105,37 +107,31 @@ export const api = {
   del: <T>(path: string) => request<T>("DELETE", path),
 };
 
-const messages: Record<string, string> = {
-  bad_credentials: "Неверный логин или пароль.",
-  bad_code: "Код не подошёл. Проверьте время на телефоне и введите новый код.",
-  challenge_expired: "Слишком долго или слишком много попыток. Войдите заново.",
-  bad_password: "Текущий пароль указан неверно.",
-  bad_setup_token: "Ключ настройки не подошёл. Возьмите его из логов контейнера.",
-  setup_done: "Bastion уже настроен. Войдите своим аккаунтом.",
-  username_taken: "Такой логин уже занят.",
-  group_exists: "Группа с таким именем уже есть.",
-  cannot_disable_self: "Себя отключить нельзя.",
-  cannot_leave_admins: "Нельзя убрать себя из группы admins.",
-  cannot_delete_self: "Себя удалить нельзя.",
-  last_admin: "Должен остаться хотя бы один активный администратор.",
-  system_group: "Группу admins удалить нельзя.",
-  not_signed_in: "Сессия закончилась. Войдите снова.",
-  admins_only: "Это доступно только администраторам.",
-  csrf: "Запрос отклонён. Обновите страницу.",
-  unknown_group: "Одна из выбранных групп уже удалена. Обновите страницу.",
-};
-
-export function errorText(err: unknown): string {
+export function errorText(err: unknown, t: T): string {
   if (err instanceof ApiError) {
     if (err.code === "locked") {
-      const minutes = Math.max(1, Math.ceil(Number(err.data.retry_after ?? 60) / 60));
-      return `Слишком много неудачных попыток. Попробуйте через ${minutes} мин.`;
+      return t("err.locked", { n: Math.max(1, Math.ceil(Number(err.data.retry_after ?? 60) / 60)) });
     }
-    if (err.code === "validation") return String(err.data.message || "Проверьте заполненные поля.");
+    if (err.code === "validation") {
+      const field = `field.${String(err.data.field ?? "")}`;
+      return field in fieldKeys ? t(field as Key) : String(err.data.message || t("err.validation"));
+    }
     if (err.code === "bad_code" && typeof err.data.attempts_left === "number") {
-      return `Код не подошёл. Осталось попыток: ${err.data.attempts_left}.`;
+      return t("err.bad_code_left", { n: err.data.attempts_left });
     }
-    return messages[err.code] ?? "Что-то пошло не так. Попробуйте ещё раз.";
+    const key = `err.${err.code}`;
+    return key in errKeys ? t(key as Key) : t("err.generic");
   }
-  return "Нет связи с сервером. Проверьте сеть и попробуйте ещё раз.";
+  return t("err.network");
 }
+
+const fieldKeys = Object.fromEntries(
+  ["username", "password", "new_password", "email", "url", "redirect_uris", "name", "display_name"].map((f) => [`field.${f}`, 1]),
+);
+const errKeys = Object.fromEntries(
+  [
+    "bad_credentials", "bad_code", "challenge_expired", "bad_password", "bad_setup_token", "setup_done",
+    "username_taken", "group_exists", "cannot_disable_self", "cannot_leave_admins", "cannot_delete_self",
+    "last_admin", "system_group", "not_signed_in", "admins_only", "csrf", "unknown_group",
+  ].map((c) => [`err.${c}`, 1]),
+);

@@ -4,11 +4,13 @@ import { api, errorText } from "../api";
 import { useAuth } from "../auth";
 import { Gate } from "../components/Gate";
 import { Field, Notice } from "../components/ui";
+import { useI18n } from "../i18n";
 
 export function SetupPage() {
+  const { t } = useI18n();
   const { loading, setupRequired, refresh } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ token: "", username: "", display_name: "", email: "", password: "" });
+  const [form, setForm] = useState({ token: "", username: "", display_name: "", password: "" });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -22,34 +24,37 @@ export function SetupPage() {
     setBusy(true);
     setError("");
     try {
-      await api.post("/api/auth/setup", { ...form, email: form.email || null });
+      await api.post("/api/auth/setup", form);
       await refresh();
       navigate("/login", { replace: true });
     } catch (err) {
-      setError(errorText(err));
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }
   };
 
+  const [before, after] = t("setup.lead").split("{cmd}");
+
   return (
     <Gate mark="drawing">
-      <h1 className="wall-title">Первый администратор</h1>
+      <h1 className="wall-title">{t("setup.title")}</h1>
       <p className="wall-lead">
-        Ключ настройки напечатан в логах контейнера: <code>docker logs bastion-auth</code>. После этого шага
-        войдёте и привяжете телефон.
+        {before}
+        <code>docker logs bastion-auth</code>
+        {after}
       </p>
       <form className="wall-form" onSubmit={submit}>
-        <Field label="Ключ настройки" required autoComplete="off" spellCheck={false} value={form.token} onChange={set("token")} autoFocus />
-        <Field label="Логин" required autoComplete="username" autoCapitalize="none" value={form.username} onChange={set("username")}
-          hint="Латиница, цифры, точка, дефис" />
-        <Field label="Как к вам обращаться" required value={form.display_name} onChange={set("display_name")} />
-        <Field label="Email" type="email" value={form.email} onChange={set("email")} hint="Необязательно. Нужен, если сервисы сопоставляют людей по почте." />
-        <Field label="Пароль" type="password" required minLength={10} autoComplete="new-password" value={form.password}
-          onChange={set("password")} hint="Не короче 10 символов" />
+        <Field label={t("setup.token")} required autoComplete="off" spellCheck={false} value={form.token}
+          onChange={set("token")} autoFocus />
+        <Field label={t("setup.username")} required autoComplete="username" autoCapitalize="none"
+          placeholder={t("setup.usernameHint")} value={form.username} onChange={set("username")} />
+        <Field label={t("setup.name")} required value={form.display_name} onChange={set("display_name")} />
+        <Field label={t("setup.password")} type="password" required minLength={10} autoComplete="new-password"
+          placeholder={t("setup.passwordHint")} value={form.password} onChange={set("password")} />
         <Notice>{error}</Notice>
         <button className="btn btn-wide" type="submit" disabled={busy}>
-          Создать администратора
+          {t("setup.submit")}
         </button>
       </form>
     </Gate>

@@ -13,8 +13,8 @@ REDIRECT = "http://app.citadel.lan/auth/callback"
 
 
 def make_project(client, **extra):
-    group = client.post("/api/admin/groups", headers=H, json={"name": "family"}).json()
-    body = {"name": "Finance", "redirect_uris": [REDIRECT], "group_ids": [group["id"]], **extra}
+    group = client.post("/api/admin/groups", headers=H, json={"name": "members"}).json()
+    body = {"name": "Service 1", "redirect_uris": [REDIRECT], "group_ids": [group["id"]], **extra}
     r = client.post("/api/admin/projects", headers=H, json=body).json()
     return r["project"], r["client_secret"], group
 
@@ -26,24 +26,24 @@ def test_service_api_authenticates_with_totp(client, admin):
     project, secret, group = make_project(client)
     auth = (project["client_id"], secret)
 
-    assert client.post("/api/v1/authenticate", json={"username": "vadim", "password": "x"}).status_code == 401
-    # admin is not in "family" yet: refused right after the password, the code is not spent
+    assert client.post("/api/v1/authenticate", json={"username": "user1", "password": "x"}).status_code == 401
+    # admin is not in "members" yet: refused right after the password, the code is not spent
     r = client.post("/api/v1/authenticate", auth=auth, json={
-        "username": "vadim", "password": "correct-horse-battery", "totp_code": future_code(admin["secret"])})
+        "username": "user1", "password": "correct-horse-battery", "totp_code": future_code(admin["secret"])})
     assert r.status_code == 403 and r.json()["detail"]["code"] == "access_denied"
 
     me = client.get("/api/me").json()
     client.patch(f"/api/admin/users/{me['id']}", headers=H,
                  json={"group_ids": [g["id"] for g in me["groups"]] + [group["id"]]})
-    r = client.post("/api/v1/authenticate", auth=auth, json={"username": "vadim", "password": "correct-horse-battery"})
+    r = client.post("/api/v1/authenticate", auth=auth, json={"username": "user1", "password": "correct-horse-battery"})
     assert r.json()["detail"]["code"] == "totp_required"
     r = client.post("/api/v1/authenticate", auth=auth, json={
-        "username": "vadim", "password": "correct-horse-battery", "totp_code": future_code(admin["secret"])})
+        "username": "user1", "password": "correct-horse-battery", "totp_code": future_code(admin["secret"])})
     assert r.status_code == 200, r.text
-    assert r.json()["user"]["groups"] == ["admins", "family"]
+    assert r.json()["user"]["groups"] == ["admins", "members"]
 
     users = client.get("/api/v1/users", auth=auth).json()
-    assert [u["username"] for u in users] == ["vadim"]
+    assert [u["username"] for u in users] == ["user1"]
 
 
 def test_service_api_rejects_wrong_secret(client, admin):
@@ -105,11 +105,11 @@ def test_oidc_code_flow_with_pkce(client, admin):
     jwk = PyJWK(client.get("/oidc/jwks").json()["keys"][0])
     claims = jwt.decode(tokens["id_token"], jwk.key, algorithms=["RS256"], audience=project["client_id"],
                         issuer="http://testserver")
-    assert claims["preferred_username"] == "vadim" and claims["nonce"] == "n0nce"
+    assert claims["preferred_username"] == "user1" and claims["nonce"] == "n0nce"
     assert claims["groups"] == ["admins"]
 
     info = client.get("/oidc/userinfo", headers={"Authorization": f"Bearer {tokens['access_token']}"}).json()
-    assert info["sub"] == claims["sub"] and info["name"] == "Вадим"
+    assert info["sub"] == claims["sub"] and info["name"] == "User 1"
 
     again = client.post("/oidc/token", auth=(project["client_id"], secret), data={
         "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT, "code_verifier": verifier})
@@ -137,7 +137,7 @@ def test_totp_qr_is_rendered(client):
     from tests.conftest import ADMIN_PASSWORD, create_admin
 
     create_admin(client)
-    client.post("/api/auth/login", headers=H, json={"username": "vadim", "password": ADMIN_PASSWORD})
+    client.post("/api/auth/login", headers=H, json={"username": "user1", "password": ADMIN_PASSWORD})
     data = client.get("/api/auth/enroll").json()
     assert data["qr_svg"].startswith("<svg") and "otpauth://totp/" in data["otpauth_uri"]
     assert pyotp.TOTP(data["secret"]).now()

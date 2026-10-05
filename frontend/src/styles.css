@@ -131,34 +131,57 @@ select {
   white-space: nowrap;
 }
 
-/* ---------- wallpaper ---------- */
+/* ---------- wallpaper ----------
+   Dawn and night are pixel-aligned renders of the same scene,
+   so switching themes cross-fades the light, not the picture. */
 
 .wallpaper {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: var(--paper);
-  background-image: url("./assets/dawn.webp");
-  background-size: cover;
-  background-position: 78% center;
+  background: var(--paper);
 }
 
-@media (max-width: 760px) {
-  .wallpaper {
-    background-image: url("./assets/dawn-small.webp");
-    background-position: 82% center;
-  }
+.wallpaper-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: 78% center;
+  transition: opacity 1.2s ease;
+}
+
+.wallpaper-dawn {
+  background-image: url("./assets/dawn.webp");
+}
+
+.wallpaper-night {
+  background-image: url("./assets/night.webp");
+  opacity: 0;
 }
 
 @media (prefers-color-scheme: dark) {
-  .wallpaper {
-    background-image: url("./assets/night.webp");
+  .wallpaper-night {
+    opacity: 1;
   }
 }
 
-@media (prefers-color-scheme: dark) and (max-width: 760px) {
-  .wallpaper {
+@media (max-width: 760px) {
+  .wallpaper-layer {
+    background-position: 82% center;
+  }
+
+  .wallpaper-dawn {
+    background-image: url("./assets/dawn-small.webp");
+  }
+
+  .wallpaper-night {
     background-image: url("./assets/night-small.webp");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper-layer {
+    transition: none;
   }
 }
 
@@ -379,7 +402,8 @@ textarea.input {
   background: var(--moat-wash);
 }
 
-/* ---------- gate (sign-in wall) ---------- */
+/* ---------- gate (sign-in wall) ----------
+   Sizes follow the window height so every step fits without scrolling. */
 
 .gate {
   min-height: 100vh;
@@ -391,7 +415,7 @@ textarea.input {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: clamp(28px, 6vh, 56px) clamp(24px, 4vw, 48px) 28px;
+  padding: clamp(18px, 4.5vh, 48px) clamp(24px, 4vw, 48px) clamp(14px, 3vh, 28px);
   background: var(--paper-veil);
   backdrop-filter: blur(14px) saturate(1.1);
   -webkit-backdrop-filter: blur(14px) saturate(1.1);
@@ -405,8 +429,8 @@ textarea.input {
 }
 
 .wall-brand .mark {
-  width: 44px;
-  height: 44px;
+  width: clamp(34px, 5vh, 44px);
+  height: clamp(34px, 5vh, 44px);
 }
 
 .wall-brand-name {
@@ -415,34 +439,49 @@ textarea.input {
   line-height: 1;
 }
 
+.wall-brand .lang {
+  margin-left: auto;
+}
+
 .wall-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px 0;
-  max-width: 360px;
+  padding: clamp(14px, 3.5vh, 40px) 0;
+  max-width: 364px;
 }
 
 .wall-title {
-  font-size: var(--step-4);
-  margin-bottom: 10px;
+  font-size: clamp(var(--step-3), 5vh, var(--step-4));
+  margin-bottom: clamp(6px, 1.2vh, 10px);
 }
 
 .wall-lead {
   color: var(--ink-soft);
-  margin-bottom: 28px;
-  max-width: 34ch;
+  margin-bottom: clamp(14px, 3vh, 28px);
+  max-width: 36ch;
 }
 
 .wall-form {
   display: grid;
-  gap: 18px;
+  gap: clamp(10px, 2vh, 18px);
 }
 
 .wall-foot {
   font-size: var(--step--1);
   color: var(--ink-faint);
+}
+
+.gate .input {
+  min-height: clamp(40px, 5.6vh, 46px);
+}
+
+@media (max-height: 640px) {
+  .wall-foot,
+  .wall-lead {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
@@ -455,16 +494,42 @@ textarea.input {
     min-height: auto;
     border-right: 0;
     border-top: 1px solid var(--rule);
-    padding: 24px 16px 20px;
+    padding: 20px 16px 16px;
   }
 
   .wall-body {
-    padding: 28px 0 24px;
+    padding: 20px 0 16px;
   }
 
   .wall-title {
     font-size: var(--step-3);
   }
+}
+
+/* ---------- language switch ---------- */
+
+.lang {
+  display: inline-flex;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.lang button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--step--1);
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.lang button[aria-pressed="true"] {
+  background: var(--button-bg);
+  color: var(--button-ink);
 }
 
 /* ---------- code input ---------- */
@@ -483,12 +548,12 @@ textarea.input {
 }
 
 .code-cell {
-  height: 64px;
+  height: clamp(50px, 7.5vh, 64px);
   min-width: 0;
   padding: 0;
   text-align: center;
   font-family: var(--font-display);
-  font-size: var(--step-4);
+  font-size: clamp(var(--step-3), 4.5vh, var(--step-4));
   line-height: 1;
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-field);
@@ -515,10 +580,17 @@ textarea.input {
 
 /* ---------- enrollment ---------- */
 
+.enroll {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
 .qr {
-  width: 188px;
-  height: 188px;
-  padding: 14px;
+  width: clamp(124px, 19vh, 168px);
+  height: clamp(124px, 19vh, 168px);
+  padding: 10px;
   background: #f6f7f3;
   color: #1d2638;
   border-radius: var(--radius-sheet);
@@ -531,21 +603,30 @@ textarea.input {
   height: 100%;
 }
 
+.enroll-key {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
 .secret {
   font-family: var(--font-text);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   word-spacing: 0.3em;
-  font-size: 0.9375rem;
-  color: var(--ink-soft);
+  font-size: 0.875rem;
+  color: var(--ink);
   user-select: all;
+  overflow-wrap: anywhere;
 }
 
 .recovery-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 18px;
-  padding: 16px 18px;
+  gap: clamp(2px, 0.6vh, 6px) 18px;
+  padding: clamp(10px, 1.8vh, 16px) 18px;
   margin: 0;
   list-style: none;
   border: 1px dashed var(--rule-strong);
@@ -558,7 +639,7 @@ textarea.input {
 /* ---------- shell (signed in) ---------- */
 
 .shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: var(--rail) minmax(0, 1fr);
 }
@@ -655,18 +736,44 @@ textarea.input {
 .sheet {
   min-width: 0;
   margin: 14px 14px 14px 0;
-  min-height: calc(100vh - 28px);
+  height: calc(100vh - 28px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--paper-glass);
   backdrop-filter: blur(18px) saturate(1.05);
   -webkit-backdrop-filter: blur(18px) saturate(1.05);
   border: 1px solid var(--rule);
   border-radius: 4px;
   box-shadow: var(--shadow);
-  padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 56px) 64px;
+  padding: clamp(20px, 4vh, 40px) clamp(16px, 4vw, 52px) clamp(16px, 3vh, 28px);
 }
 
 .sheet-inner {
-  max-width: 1080px;
+  max-width: 1120px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Takes the rest of the sheet; paged tables measure it to fit their rows. */
+.fill {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pager {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  font-size: 0.875rem;
 }
 
 .page-head {
@@ -675,11 +782,12 @@ textarea.input {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 32px;
+  margin-bottom: clamp(16px, 3vh, 28px);
+  flex: none;
 }
 
 .page-title {
-  font-size: var(--step-4);
+  font-size: clamp(var(--step-3), 5vh, var(--step-4));
 }
 
 .page-lead {
@@ -791,14 +899,24 @@ textarea.input {
 /* ---------- tables ---------- */
 
 .table-wrap {
-  overflow-x: auto;
   border-top: 1px solid var(--ink);
+}
+
+.fill > .table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.9375rem;
+}
+
+.table tbody tr {
+  height: 58px;
 }
 
 .table th {
@@ -812,9 +930,17 @@ textarea.input {
 }
 
 .table td {
-  padding: 13px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--rule);
-  vertical-align: top;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table .seals {
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .table tbody tr {
@@ -830,12 +956,17 @@ textarea.input {
 }
 
 .table .primary {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 500;
   color: var(--ink);
 }
 
 .table .secondary {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--ink-faint);
   font-size: var(--step--1);
 }
@@ -898,7 +1029,14 @@ textarea.input {
 
 .services {
   display: grid;
+  align-content: start;
   border-top: 1px solid var(--ink);
+}
+
+.fill > .services {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .service {
@@ -906,7 +1044,9 @@ textarea.input {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 22px 4px;
+  height: 84px;
+  padding: 0 4px;
+  overflow: hidden;
   border-bottom: 1px solid var(--rule);
   color: inherit;
   text-decoration: none;
@@ -923,8 +1063,11 @@ a.service:hover {
 }
 
 .service-desc {
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .service-host {
@@ -952,16 +1095,16 @@ a.service:hover {
 }
 
 .drawer {
-  width: min(520px, 100%);
+  width: min(720px, 100%);
   height: 100%;
   overflow-y: auto;
   background: var(--paper);
   border-left: 1px solid var(--rule-strong);
   box-shadow: var(--shadow);
-  padding: 28px clamp(16px, 4vw, 32px) 40px;
+  padding: clamp(18px, 3.5vh, 28px) clamp(16px, 4vw, 32px) clamp(18px, 3.5vh, 32px);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: clamp(12px, 2.4vh, 20px);
   animation: drawer-in 180ms ease-out;
 }
 
@@ -1124,4 +1267,112 @@ code,
 pre {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   font-size: 0.85em;
+}
+
+/* ---------- drawer forms & tabs ---------- */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.8vh, 16px) 20px;
+  align-items: start;
+}
+
+.form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+.checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--rule);
+  flex: none;
+}
+
+.tab {
+  padding: 8px 2px;
+  margin: 0 18px -1px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--carmine);
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+/* ---------- account ---------- */
+
+.account-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(16px, 3vh, 28px) 48px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.6vh, 12px);
+  min-height: 0;
+  padding-top: clamp(10px, 2vh, 16px);
+  border-top: 1px solid var(--ink);
+}
+
+.panel-title {
+  font-size: var(--step-2);
+}
+
+.panel-head p {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+.panel .form-stack {
+  max-width: none;
+  gap: clamp(10px, 1.8vh, 16px);
+}
+
+@media (max-width: 760px) {
+  .form-grid,
+  .checks,
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .enroll {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell {
+    height: auto;
+  }
+
+  .sheet {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Phones: keep the first two columns, the rest is in the detail panel. */
+  .table th:nth-child(n + 3),
+  .table td:nth-child(n + 3) {
+    display: none;
+  }
 }

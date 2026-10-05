@@ -1,121 +1,135 @@
 # Bastion
 
-Свой сервер входа для домашней цитадели. Один раз заводите людей, группы и проекты, люди один раз привязывают
-телефон, и дальше во все сервисы входят одним логином, паролем и кодом из Google Authenticator.
+A small, self-hosted sign-in service for a home server. Create people, groups and projects once; people bind
+their phone once; after that every service signs them in with a username, a password and a code from Google
+Authenticator.
 
-![Вход](docs/screenshots/01-login.webp)
+![Sign-in](docs/screenshots/01-login.webp)
 
-## Что умеет
+## What it does
 
-- **Люди и группы.** Добавить человека, задать пароль, выдать группы, отключить вход, отвязать телефон, завершить
-  все сеансы. Группа работает как пропуск: проекту указываете группы, и пускают только их участников.
-- **Код из приложения для всех.** При первом входе Bastion показывает QR-код для Google Authenticator (или любого
-  TOTP-приложения) и выдаёт 10 резервных кодов на случай потери телефона.
-- **Проекты.** Регистрируете сервис, получаете `client_id` и секрет. Подключить можно двумя способами:
-  - **OIDC** («Войти через Bastion»): для Immich и любых сервисов с поддержкой OpenID Connect;
-  - **своей формой входа**: бэкенд проекта сам отправляет в Bastion логин, пароль и код.
-- **Главная для людей.** Список сервисов, куда человеку открыт вход.
-- **Журнал входов.** Кто, когда и откуда входил, неудачные попытки, изменения настроек.
-- Светлая и тёмная тема (утренний и ночной форт), вёрстка под телефон.
+- **People and groups.** Add a person, set a password, assign groups, disable sign-in, unbind a phone, end
+  every session. A group works as a pass: give a project some groups and only their members get in.
+- **A code from the app for everyone.** On the first sign-in Bastion shows a QR code for Google Authenticator
+  (or any TOTP app) and hands out ten recovery codes in case the phone is lost.
+- **Projects.** Register a service and get a `client_id` and a secret. Two ways to connect it:
+  - **OIDC** ("Sign in with Bastion") for Immich and anything that speaks OpenID Connect;
+  - **the project's own sign-in form**: its backend sends the username, password and code to Bastion.
+- **A home page for people** listing the services they can enter.
+- **Sign-in log**: who signed in, when and from where, failed attempts, settings changes.
+- **English and Russian**, switchable on every page.
+- **Light and dark themes** with matching dawn and night wallpapers. The two renders are aligned to a fraction
+  of a pixel, so switching themes cross-fades the light over the same scene.
+- **Fits the window.** Every screen fits a 100% zoom browser window from 1280×610 up, no scrolling; long lists
+  page by the number of rows that fit.
 
 | | |
 |---|---|
-| ![Привязка телефона](docs/screenshots/02-enroll.webp) | ![Код при входе, тёмная тема](docs/screenshots/12-code-dark.webp) |
-| ![Сервисы](docs/screenshots/04-services.webp) | ![Сервисы, тёмная тема](docs/screenshots/13-services-dark.webp) |
-| ![Люди](docs/screenshots/05-users.webp) | ![Карточка человека](docs/screenshots/06-user-drawer.webp) |
-| ![Новый проект](docs/screenshots/08-project-credentials.webp) | ![Журнал](docs/screenshots/10-audit.webp) |
+| ![Binding a phone](docs/screenshots/02-enroll.webp) | ![Code on sign-in, dark theme](docs/screenshots/12-code-dark.webp) |
+| ![Services](docs/screenshots/04-services.webp) | ![Services, dark theme](docs/screenshots/13-services-dark.webp) |
+| ![People](docs/screenshots/05-users.webp) | ![Person details](docs/screenshots/06-user-drawer.webp) |
+| ![New project](docs/screenshots/08-project-credentials.webp) | ![Profile](docs/screenshots/11-account.webp) |
 
-<p align="center"><img src="docs/screenshots/15-login-phone.webp" width="300" alt="Вход с телефона"></p>
+<p align="center"><img src="docs/screenshots/15-login-phone.webp" width="300" alt="Sign-in on a phone"></p>
 
-## Безопасность
+## Security
 
-- Пароли хранятся в **argon2id**, секреты TOTP зашифрованы (Fernet, ключ в `data/keys/`).
-- Защита от перебора: 5 ошибок на логин или 25 с одного IP за 15 минут блокируют попытки на 15 минут. Учёт ведётся
-  в базе и переживает перезапуск.
-- Код TOTP нельзя использовать повторно; после 5 неверных кодов вход начинается заново.
-- Сессии хранятся на сервере, в cookie лежит только случайный токен (HttpOnly, SameSite=Lax). Изменяющие запросы
-  требуют заголовок `X-Bastion`, это закрывает CSRF.
-- OIDC: authorization code flow, PKCE (S256), подпись токенов RS256, проверка точного совпадения redirect URI,
-  одноразовые коды на 60 секунд.
-- Строгие заголовки (CSP, `frame-ancestors 'none'`), контейнер без root, с read-only файловой системой и без
-  capabilities.
-- Журнал всех входов и изменений.
+- Passwords are hashed with **argon2id**; TOTP secrets are encrypted at rest (Fernet, key in `data/keys/`).
+- Brute-force protection: 5 failures per username or 25 per IP within 15 minutes lock attempts for 15 minutes.
+  Counters live in the database and survive restarts.
+- A TOTP code cannot be reused; after 5 wrong codes the sign-in starts over.
+- Server-side sessions; the cookie holds only a random token (HttpOnly, SameSite=Lax). State-changing requests
+  require the `X-Bastion` header, which blocks CSRF.
+- OIDC: authorization code flow, PKCE (S256), RS256-signed tokens, exact redirect URI match, single-use codes
+  valid for 60 seconds.
+- Strict headers (CSP, `frame-ancestors 'none'`); the container runs as non-root with a read-only filesystem
+  and no capabilities.
 
-> Пока Bastion работает по HTTP внутри домашней сети. Перед тем как открывать его в интернет, поставьте перед ним
-> HTTPS (Caddy или Traefik) и включите `BASTION_COOKIE_SECURE=true`.
+> Out of the box Bastion speaks plain HTTP for a home network. Before exposing it to the internet, put it behind
+> HTTPS (Caddy, Traefik…) and set `BASTION_COOKIE_SECURE=true`.
 
-## Запуск
+## Running
 
 ```sh
-cp .env.example .env        # поправьте адрес, порт и папку с данными
+cp .env.example .env        # set the address, port and data directory
 mkdir -p /srv/bastion-auth/data
 docker compose up -d --build
-docker logs bastion-auth    # здесь ключ настройки первого администратора
+docker logs bastion-auth    # prints the setup key for the first administrator
 ```
 
-Откройте `BASTION_PUBLIC_URL`, введите ключ настройки и создайте администратора. При первом входе Bastion попросит
-привязать телефон.
+Open `BASTION_PUBLIC_URL`, enter the setup key and create the administrator. On the first sign-in Bastion asks
+you to bind your phone.
 
-`BASTION_PUBLIC_URL` — это issuer для OIDC. Указывайте ровно тот адрес, по которому Bastion открывают люди и проекты,
-и не меняйте его без нужды: подключённые проекты придётся перенастроить.
+`BASTION_PUBLIC_URL` is the OIDC issuer. Set it to exactly the address people and projects use, and avoid
+changing it later: connected projects would need to be reconfigured.
 
-Бэкапить нужно папку `BASTION_DATA` целиком: там база (`bastion.db`) и ключи (`keys/`). Без ключей секреты TOTP не
-расшифровать, и всем придётся привязывать телефоны заново.
+Back up the whole `BASTION_DATA` directory: it holds the database (`bastion.db`) and the keys (`keys/`).
+Without the keys TOTP secrets cannot be decrypted and everyone would have to bind their phone again.
 
-## Подключение проектов
+Update after new commits:
 
-Сначала зарегистрируйте проект в разделе **Проекты**. Секрет показывается один раз.
+```sh
+git pull && docker compose up -d --build
+```
 
-### Immich (OIDC)
+## Connecting projects
 
-В Immich: *Администрирование → Настройки → OAuth*.
+Register the project under **Projects** first. The secret is shown once.
 
-| Поле | Значение |
+### OIDC (Immich and others)
+
+In Immich: *Administration → Settings → OAuth*.
+
+| Field | Value |
 |---|---|
-| Issuer URL | `http://192.168.31.93:8800` |
-| Client ID / Secret | из Bastion |
+| Issuer URL | `http://bastion.home.arpa:8800` |
+| Client ID / Secret | from Bastion |
 | Scope | `openid email profile` |
-| Button text | `Войти через Bastion` |
+| Button text | `Sign in with Bastion` |
 
-В Bastion добавьте адреса возврата `http://<immich>/auth/login`, `http://<immich>/user-settings` и
-`app.immich:///oauth-callback` (для мобильного приложения). Immich сопоставляет людей по email, поэтому заполните
-почту у пользователей.
+In Bastion add the return addresses `http://<immich>/auth/login`, `http://<immich>/user-settings` and
+`app.immich:///oauth-callback` (mobile app). Immich matches people by email, so fill in their email addresses.
 
-Адреса для любых OIDC-клиентов: `/.well-known/openid-configuration` (discovery), `/oidc/authorize`, `/oidc/token`,
+Endpoints for any OIDC client: `/.well-known/openid-configuration`, `/oidc/authorize`, `/oidc/token`,
 `/oidc/userinfo`, `/oidc/jwks`, `/oidc/logout`. Claims: `sub`, `preferred_username`, `name`, `email`, `groups`.
 
-### Своя форма входа
+### The project's own sign-in form
 
-Бэкенд проекта проверяет человека одним запросом:
+The project backend checks a person with one request:
 
 ```http
 POST /api/v1/authenticate
 Authorization: Basic base64(client_id:client_secret)
-X-Bastion-End-User-IP: <IP человека>
+X-Bastion-End-User-IP: <the person's IP>
 Content-Type: application/json
 
-{"username": "anna", "password": "…", "totp_code": "123456"}
+{"username": "user2", "password": "…", "totp_code": "123456"}
 ```
 
-Ответ `200`: `{"user": {"id", "username", "display_name", "email", "groups", "is_active"}}`. Ошибки в
+`200` returns `{"user": {"id", "username", "display_name", "email", "groups", "is_active"}}`. Errors come in
 `detail.code`: `invalid_credentials`, `totp_required`, `invalid_totp`, `totp_not_enrolled`, `access_denied`,
-`locked` (с `retry_after`). Храните у себя `user.id`, а не логин.
+`locked` (with `retry_after`). Store `user.id` on your side, not the username.
 
-`GET /api/v1/users` возвращает всех, кого пускают в проект, а `GET /api/v1/users/{id}` — одного человека.
+`GET /api/v1/users` lists everyone allowed into the project; `GET /api/v1/users/{id}` returns one person.
 
-Для Python есть готовый клиент без зависимостей: [`clients/python/bastion_auth_client.py`](clients/python/bastion_auth_client.py).
+A dependency-free Python client: [`clients/python/bastion_auth_client.py`](clients/python/bastion_auth_client.py).
 
-## Разработка
+## Development
 
 ```sh
 python -m venv .venv && .venv/bin/pip install -e "backend[dev]"
-cd backend && ../.venv/bin/pytest            # тесты бэкенда
+cd backend && ../.venv/bin/pytest            # backend tests
 BASTION_DATA_DIR=../data ../.venv/bin/uvicorn app.main:app --port 8800
 
-cd frontend && npm install && npm run dev    # интерфейс на :5173, API проксируется на :8800
+cd frontend && npm install && npm run dev    # UI on :5173, API proxied to :8800
 ```
 
-Стек: FastAPI, SQLAlchemy, Alembic, SQLite, React, Vite. Скриншоты для README снимает
-`scripts/screenshots.py` (Playwright и установленный Edge) на чистом экземпляре.
+Stack: FastAPI, SQLAlchemy, Alembic, SQLite, React, Vite.
 
-Обои сгенерированы через Codex `imagegen`, шрифты — Forum и Golos Text.
+Tooling in `scripts/` (Playwright with the installed Microsoft Edge, run against a fresh instance):
+
+- `screenshots.py` captures the README screenshots;
+- `fit_check.py` walks every screen at common window sizes and reports anything that scrolls.
+
+Wallpapers were generated with Codex `imagegen`; the night render was produced as a relighting edit of the dawn
+one and then aligned with OpenCV ECC (median residual 0.23 px). Fonts: Forum and Golos Text.

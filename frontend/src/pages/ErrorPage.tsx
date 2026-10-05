@@ -1,29 +1,18 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { Gate } from "../components/Gate";
-
-const reasons: Record<string, { title: string; body: string }> = {
-  unknown_client: {
-    title: "Сервис не зарегистрирован",
-    body: "Bastion не знает сервис, который отправил вас сюда, или он отключён. Проверьте client_id в его настройках.",
-  },
-  bad_redirect_uri: {
-    title: "Неизвестный адрес возврата",
-    body: "Сервис попросил вернуть вас на адрес, которого нет в его настройках в Bastion. Добавьте этот адрес в проект.",
-  },
-};
+import { useI18n } from "../i18n";
 
 export function ErrorPage() {
+  const { t } = useI18n();
   const [params] = useSearchParams();
-  const reason = reasons[params.get("code") ?? ""] ?? {
-    title: "Не получилось продолжить",
-    body: "Вернитесь в сервис и попробуйте войти ещё раз.",
-  };
+  const code = params.get("code");
+  const reason = code === "unknown_client" || code === "bad_redirect_uri" ? code : "generic";
   return (
     <Gate>
-      <h1 className="wall-title">{reason.title}</h1>
-      <p className="wall-lead">{reason.body}</p>
+      <h1 className="wall-title">{t(`error.${reason}.title`)}</h1>
+      <p className="wall-lead">{t(`error.${reason}.body`)}</p>
       <Link className="btn btn-quiet" to="/">
-        На главную Bastion
+        {t("error.home")}
       </Link>
     </Gate>
   );

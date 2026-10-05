@@ -331,12 +331,13 @@ def delete_project(project_id: int, request: Request, admin: User = Depends(requ
 @router.get("/audit")
 def audit_log(
     before: int | None = None,
+    offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     only_failures: bool = False,
     _admin: User = Depends(require_admin),
     db: DbSession = Depends(get_db),
 ) -> list[dict]:
-    q = select(AuditEvent).order_by(AuditEvent.id.desc()).limit(limit)
+    q = select(AuditEvent).order_by(AuditEvent.id.desc()).offset(offset).limit(limit)
     if before is not None:
         q = q.where(AuditEvent.id < before)
     if only_failures:
