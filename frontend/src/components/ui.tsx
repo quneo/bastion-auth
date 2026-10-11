@@ -12,6 +12,7 @@ import {
   type RefObject,
   type TextareaHTMLAttributes,
 } from "react";
+import { copyText } from "../clipboard";
 import { useI18n, type T } from "../i18n";
 
 export function Field({
@@ -193,14 +194,7 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
     <button
       type="button"
       className="btn btn-quiet btn-small"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          toast(t("common.copied"));
-        } catch {
-          toast(t("common.copyFailed"));
-        }
-      }}
+      onClick={async () => toast(t((await copyText(value)) ? "common.copied" : "common.copyFailed"))}
     >
       {label ?? t("common.copy")}
     </button>
